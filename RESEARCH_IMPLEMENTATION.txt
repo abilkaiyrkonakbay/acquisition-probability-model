@@ -1,0 +1,197 @@
+ACQUISITION PROBABILITY MODEL - HOW I USED THE RESEARCH
+Version 0.3 | Notes updated 30 September 2026
+
+Why I looked at research
+
+I wanted the model's inputs to have a financial reason behind them, rather than
+just adding variables and hoping they improved the results. I used these papers
+as starting points for choosing inputs and deciding how to test the model.
+
+I did not recreate the papers' original datasets or methods. This is a smaller
+student project that adapts some of their ideas. The demo uses generated data,
+so its results are not evidence that the model can predict real takeovers.
+
+How I set up the model
+
+1. I mark whether a company receives a qualifying takeover announcement in the
+   next 12 months. I leave out observations without a full year of follow-up.
+2. I keep the actual mix of targets and non-targets in validation and testing,
+   rather than creating an artificially balanced sample.
+3. I compare companies with peers on the same date. Missing-value filling and
+   other data preparation learn from the training data only.
+4. I compare four models on later years. Each fit only uses outcomes that would
+   already have been known at that point, so it cannot learn from the future.
+5. I use a separate sample to adjust scores into estimated probabilities, then
+   test the chosen model without changing it using the final test results.
+6. I focus on acquisition frequency in the top-ranked 10%, compared with the
+   full sample. I also check how many targets are captured and how accurate the
+   probabilities are.
+
+The papers and what I changed
+
+1. Testing a model when takeovers are rare
+
+Palepu (1986), Predicting takeover targets: A methodological and empirical analysis.
+https://doi.org/10.1016/0165-4101(86)90008-X
+
+This paper helped shape how I think about the sample and the test. High accuracy
+can be misleading when most companies are not acquired. I keep all eligible
+companies in the evaluation and measure whether the highest-ranked group has
+more takeovers than the full sample.
+
+During training, I give the rarer takeover observations more weight. I do not
+change the event mix in validation or testing. I also keep probability adjustment
+separate from model selection. Those timing safeguards are my implementation
+choices, not a claim that this paper used the exact same approach.
+Code: modeling.py, metrics.py and labels.py.
+
+2. Industry activity and financing conditions
+
+Mitchell and Mulherin (1996), The impact of industry shocks on takeover and
+restructuring activity. https://doi.org/10.1016/0304-405X(95)00860-H
+Harford (2005), What drives merger waves?
+https://www.sciencedirect.com/science/article/pii/S0304405X04002041
+
+These papers led me to look beyond the individual company. I added a comparison
+of recent industry deal activity with its three-year average, the size of changes
+in industry sales, and credit spreads as a rough measure of financing conditions.
+I also combine the industry-change measure with the financing measure.
+
+I keep the existing measures of industry concentration and past deal activity.
+My added variables are simple stand-ins for these ideas, not the exact measures
+used in the papers.
+Code: features.py, the industry_waves group, and sql/feature_mart.sql.
+
+3. Ownership, assets and takeover defenses
+
+Ambrose and Megginson (1992), The role of asset structure, ownership structure,
+and takeover defenses in determining acquisition likelihood.
+https://doi.org/10.2307/2331141
+
+I added changes in institutional ownership, stakes held by large outside
+shareholders, takeover-defense indicators, and property, plant and equipment
+as a share of total assets. If I do not have a governance value, I leave it
+missing instead of assuming that the company has no takeover defense.
+
+I do not assume these variables always affect takeover likelihood in the same
+direction. The paper's significant defense finding concerned blank-check
+preferred stock. My poison-pill and staggered-board inputs are related ideas
+to test, not a recreation of that particular finding.
+Code: features.py, the ownership_and_assets group, and data.py.
+
+4. Cheap valuations and weak stock performance
+
+Edmans, Goldstein and Jiang (2012), The real effects of financial markets:
+The impact of prices on takeovers. https://doi.org/10.1111/j.1540-6261.2012.01738.x
+Agrawal and Jaffe (2003), Do takeover targets underperform? Evidence from
+operating and stock returns. https://doi.org/10.2307/4126741
+
+I did not want to assume that takeover targets are always struggling companies.
+I compare valuation and stock returns with industry peers, and include a term
+that combines a valuation discount with weak relative stock performance.
+
+I then test a version without the stock-return terms to see whether they help.
+This can show a predictive relationship, but it cannot prove that a low share
+price causes a takeover. I also test free cash flow relative to enterprise value
+and cash combined with falling sales. These are extra project ideas, not results
+copied from the papers.
+Code: features.py and the model comparisons in modeling.py.
+
+5. Innovation and strategic assets
+
+Wu and Chung (2019), Corporate innovation, likelihood to be acquired, and
+takeover premiums. https://doi.org/10.1016/j.jbankfin.2019.105634
+
+I added R&D spending relative to revenue, patent counts on a log scale, and
+citations per patent. The important rule is that patent information must have
+been available on the observation date. Using citations received years later
+would give the model information it could not have known at the time.
+
+Real historical patent data still needs to be checked before it reaches the
+model. I do not estimate the premium a buyer might pay.
+Code: features.py, the innovation group.
+
+6. Looking beyond accuracy
+
+Saito and Rehmsmeier (2015), The precision-recall plot is more informative than
+the ROC plot when evaluating binary classifiers on imbalanced datasets.
+https://doi.org/10.1371/journal.pone.0118432
+
+I include average precision alongside lift and target capture. This gives me
+another way to check how well the model ranks the rare takeover observations.
+I also keep Brier score and log loss, which measure errors in the probabilities.
+
+For the lift uncertainty interval, I repeatedly sample whole company histories.
+That keeps a company's observations together across years. This is a separate
+project choice, not a method I attribute to this paper. The interval does not
+cover every risk, such as a different market environment or missing deal records.
+Code: metrics.py.
+
+7. A good shortlist is not the same as a profitable strategy
+
+Cremers, Nair and John (2009), Takeovers and the cross-section of returns.
+https://papers.ssrn.com/sol3/papers.cfm?abstract_id=1365691
+
+I keep takeover prediction separate from investment performance. Finding more
+future targets does not tell me what return I would earn after buying them.
+I would also need to consider entry prices, waiting time, trading costs and the
+companies that never receive a bid. I do not claim a trading return or Sharpe
+ratio from the classification results.
+
+What I left out to keep the project manageable
+
+Hoberg and Phillips (2010), Product market synergies and competition in mergers
+and acquisitions: A text-based analysis. https://www.nber.org/papers/w14289
+Powell (1997), Modelling takeover likelihood. https://doi.org/10.1111/1468-5957.00148
+
+Comparing companies' product descriptions and studying different types of
+takeovers are useful directions for future work. I removed the optional text
+comparison and deal-type reports from this version to keep the focus on the
+financial inputs. Both would need more historical data to do properly. The
+current model does not predict separate probabilities for different deal types.
+
+I also removed automatic feature-importance calculations, duplicate CSV and
+database exports, extra charts and repeated documentation. I kept the four
+model comparisons and the checks that prevent future information from entering
+training. Each run saves five CSV reports, a JSON summary, a model and one chart.
+The demo also saves its generated input data.
+
+Where to find the work
+
+All Python files below are in src/acq_probability/.
+- pipeline.py brings the steps together and saves the results.
+- features.py calculates 17 basic numeric inputs and 15 research additions,
+  with sector included as a separate category.
+- modeling.py prepares the data, compares models and adjusts their probabilities.
+- metrics.py calculates the ranking results and uncertainty interval.
+- labels.py creates the takeover labels; data.py checks the input data.
+- reporting.py saves the JSON summary and the chart.
+
+The commands are demo, label, train and score. The SQL backtest reads the
+predictions CSV directly, so I do not need to maintain a separate database.
+
+How I check it and what the demo tells me
+
+With the virtual environment active, run:
+    pytest
+    ruff check .
+    acq-model demo
+
+The tests check the calculations, date rules, missing inputs, saved-model scoring,
+and agreement between Python and SQL. They also check that calibration and final
+test outcomes cannot influence which model is selected.
+
+The demo starts with 650 fictional companies and uses random seed 42. The basic
+logistic model wins model selection. In the final test, 18 of 194 shortlisted
+company-year observations have an announcement, compared with 46 of 1,930 overall.
+That is 9.28% versus 2.38%, or 3.89x lift and 39.1% target capture.
+
+There is still a clear limitation: the average predicted probability is 4.02%,
+above the actual 2.38% event rate. A useful ranking does not mean the probabilities
+are accurate, and only 19 events are available for the probability-adjustment step.
+
+My next step would be to test the same approach on real historical company data,
+including acquired and delisted firms. I would need reliable announcement records
+and dates showing when each input became available. If I change the model after
+looking at the test results, I would need a fresh test period before making a
+new claim about its performance.

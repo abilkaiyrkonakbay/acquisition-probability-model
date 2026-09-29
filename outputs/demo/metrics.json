@@ -1,0 +1,44 @@
+{
+  "n_observations": 1930,
+  "acquisitions": 46,
+  "roc_auc": 0.7580887104218591,
+  "average_precision": 0.0885181834301206,
+  "brier_score": 0.02313105645082246,
+  "log_loss": 0.10624745850140593,
+  "base_rate": 0.02383419689119171,
+  "top_decile_acquisition_rate": 0.09278350515463918,
+  "top_decile_lift": 3.8928731510533394,
+  "top_decile_capture_rate": 0.391304347826087,
+  "selected_model": "baseline_logistic",
+  "data_source": "synthetic",
+  "top_fraction": 0.1,
+  "lift_ci_lower": 2.5473508749151614,
+  "lift_ci_upper": 5.252116803256835,
+  "mean_predicted_probability": 0.040159155680251336,
+  "protocol": {
+    "selection_dates": [
+      "2018-12-31",
+      "2019-12-31"
+    ],
+    "selection_folds": 2,
+    "selection_warning": null,
+    "calibration_date": "2020-12-31",
+    "calibration_label_end": "2021-12-31",
+    "calibration_rows": 518,
+    "calibration_events": 19,
+    "calibration_base_rate": 0.03667953667953668,
+    "calibration_constant_fallback": false,
+    "development_rows": 4763,
+    "latest_development_label_end": "2020-12-31",
+    "first_test_date": "2021-12-31",
+    "test_model_policy": "frozen; no test-period refit or selection",
+    "bootstrap_unit": "company history; conditional on observed test dates"
+  },
+  "minimum_outcome_coverage": "2025-12-31T00:00:00",
+  "availability_timestamp_coverage": {
+    "filing_available_date": 1.0,
+    "ownership_available_date": 1.0,
+    "industry_available_date": 1.0,
+    "innovation_available_date": 1.0
+  }
+}
